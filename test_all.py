@@ -1,4 +1,4 @@
-"""Comprehensive test suite for skill+api memory/security integration.
+"""Tests for skill+api memory and security integration.
 
 Usage:
     python test_all.py

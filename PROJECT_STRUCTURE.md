@@ -1,4 +1,4 @@
-# skill+api — project structure
+# skill+api project structure
 
 ```
 skill+api/
@@ -59,19 +59,19 @@ skill+api/
 
 ## what everything does
 
-**run.py** -> **main.py** -- starts the web server. all requests flow through here.
+run.py -> main.py -- starts the web server. all requests flow through here.
 
-**routers/** -- waiters. they take your request and pass it to the right kitchen.
+routers/ -- waiters. they take your request and pass it to the right kitchen.
 
-**services/** -- the kitchen. groq bakes articles, gemini fetches web facts, scraper reads websites.
+services/ -- the kitchen. groq bakes articles, gemini fetches web facts, scraper reads websites.
 
-**guardrails/** -- health inspector. blocks bad inputs before they reach the ai, cleans outputs before they reach you.
+guardrails/ -- health inspector. blocks bad inputs before they reach the ai, cleans outputs before they reach you.
 
-**security/** -- security guard. checks your api key, rate-limits, locks cors.
+security/ -- security guard. checks your api key, rate-limits, locks cors.
 
-**memory/store.py** -- filing cabinet. every chat, every upload, every api key gets saved to a sqlite file on disk.
+memory/store.py -- filing cabinet. every chat, every upload, every api key gets saved to a sqlite file on disk.
 
-**tools/** -- the ai's toolbox. when you chat with tools enabled, the ai can search the web, scrape urls, analyze writing style, or score articles on its own.
+tools/ -- the ai's toolbox. when you chat with tools enabled, the ai can search the web, scrape urls, analyze writing style, or score articles on its own.
 
 ## what happens when you click "start research"
 

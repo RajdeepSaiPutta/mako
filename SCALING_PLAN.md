@@ -1,12 +1,12 @@
-# Scaling Plan — skill+api
+# Scaling plan for skill+api
 
-> **Author**: Generated via codebase audit  
-> **Date**: 2026-05-28  
-> **Status**: Phase 1A and Phase 1B implemented; Phase 1B security/memory integration complete; Phase 1C/1D not started
+> Author: generated from a codebase audit  
+> Date: 2026-05-28  
+> Status: Phase 1A and Phase 1B implemented; Phase 1B security/memory integration complete; Phase 1C/1D not started
 
 ---
 
-## Implementation Status Update — 2026-05-28
+## Implementation status, 2026-05-28
 
 ### Completed: Phase 1A
 
@@ -63,17 +63,16 @@ Verification performed:
 Known Phase 1A caveat:
 - `BodySizeLimitMiddleware` currently enforces request size using `Content-Length` and rejects body-bearing `POST`/`PUT`/`PATCH` requests without that header. This is intentional for now to avoid chunked-body bypasses. If streaming uploads are added later, this middleware must be replaced with a streaming byte-counting ASGI implementation that is tested against the deployed ASGI server.
 
-### Not Started
+### Not started
 
-The following phases have not been implemented:
-- Phase 1C — MCP tool system
-- Phase 1D — Document ingestion
-- Phase 2 — Additional guardrail expansion beyond the Phase 1A hardcoded baseline
-- Full Phase 6 — Full frontend redesign (chat interface, document upload UI, usage dashboard, etc.)
+- Phase 1C: MCP tool system
+- Phase 1D: Document ingestion
+- Phase 2: guardrail expansion beyond the Phase 1A hardcoded baseline
+- Full Phase 6: frontend redesign (chat interface, document upload UI, usage dashboard, etc.)
 
 The user changed priority after Phase 1B: memory and security were pulled forward before Phase 1C/1D.
 Do not start tools or document ingestion unless explicitly requested.
-Token optimization (Phase 4) was partially completed inline with the memory/security work — see details in the section below.
+Token optimization (Phase 4) was partially completed inline with the memory/security work. See details below.
 
 ### Completed: Phase 1B
 
@@ -94,7 +93,7 @@ Security behavior:
 Plan contradiction resolved:
 - The plan asks for SSE streaming and also requires output guardrails before streaming. Those conflict for true token-by-token streaming. The implementation chooses safety: collect model output, sanitize it, then emit sanitized SSE chunks.
 
-### Pulled Forward: Persistent Memory and Security
+### Added early: persistent memory and security
 
 Implemented after the user reprioritized:
 - SQLite-backed session/message store in `app/memory/store.py`.
@@ -103,16 +102,16 @@ Implemented after the user reprioritized:
   - Session history bounded by `max_history_messages` (configurable, default 20).
 - `app/services/session_service.py` now persists history to SQLite instead of process memory.
 - Session APIs in `app/routers/sessions.py`:
-  - `GET /api/sessions` — list sessions (paginated, newest first)
-  - `GET /api/sessions/{session_id}` — get session details + message history
-  - `POST /api/sessions/{session_id}/resume` — resume session, returns history
-  - `DELETE /api/sessions/{session_id}` — delete session and its messages
+  - `GET /api/sessions`: list sessions (paginated, newest first)
+  - `GET /api/sessions/{session_id}`: get session details + message history
+  - `POST /api/sessions/{session_id}/resume`: resume session, returns history
+  - `DELETE /api/sessions/{session_id}`: delete session and its messages
 - API-key storage and admin key management:
-  - `app/security/auth.py` — `parse_bearer_token`, `authenticate_request`, `require_admin`
-  - `app/routers/admin.py` — admin key CRUD
-  - `POST /api/admin/keys` — create key (returns raw `sk-*` key once)
-  - `GET /api/admin/keys` — list key hashes/metadata (never raw keys)
-  - `DELETE /api/admin/keys/{key_hash}` — revoke key
+  - `app/security/auth.py`: `parse_bearer_token`, `authenticate_request`, `require_admin`
+  - `app/routers/admin.py`: admin key CRUD
+  - `POST /api/admin/keys`: create key (returns raw `sk-*` key once)
+  - `GET /api/admin/keys`: list key hashes/metadata (never raw keys)
+  - `DELETE /api/admin/keys/{key_hash}`: revoke key
 - SQLite-backed rate limiting in `app/security/rate_limiter.py`.
   - Sliding window per-minute and per-day counters.
   - Separate anonymous vs authenticated thresholds.
@@ -160,7 +159,7 @@ Token usage reductions verified in code:
   - Total runtime instruction capped at 9000 chars.
 
 Verification results (2026-05-28):
-- `python -m compileall app run.py` — no errors.
+- `python -m compileall app run.py`: no errors.
 - OpenAPI spec lists all expected 9 paths.
 - 24 targeted tests pass covering:
   - SQLite session append/get/list/get/delete persistence
@@ -173,43 +172,43 @@ Verification results (2026-05-28):
   - Wildcard CORS rejection at config level
   - SSRF loopback/link-local URL rejection
   - Error sanitization (no stack leak in responses)
-- All tests run via `fastapi.testclient.TestClient` with a temporary SQLite database and dummy API keys — no real model calls needed.
+- All tests run via `fastapi.testclient.TestClient` with a temporary SQLite database and dummy API keys. No real model calls are needed.
 
 ---
 
-## Original Current State Assessment (Pre-Phase 1A)
+## Original state assessment before Phase 1A
 
 The section below is the original audit snapshot before Phase 1A was implemented. Use the implementation status above as the current source of truth.
 
-### What Existed Before Phase 1A
-- **Backend**: Single-file FastAPI app ([main.py](file:///home/rajdeep/skill+api/main.py)) — ~280 lines, monolithic.
-- **Frontend**: Single-file HTML/CSS/JS dashboard ([index.html](file:///home/rajdeep/skill+api/index.html)) — ~728 lines, hardcoded to `localhost:8000`.
-- **AI Pipeline**: Groq (`llama-3.3-70b-versatile`) for generation, Gemini (`gemini-2.5-flash`) for Google-grounded search.
-- **Session State**: In-memory Python dict (`sessions`), capped at 10 messages, lost on restart.
-- **Guardrails**: Soft — only what SKILL.md tells the model. Zero hardcoded enforcement.
-- **Security**: None. CORS is `*`. No auth, no rate limits, no input validation, no output sanitization.
+### What existed before Phase 1A
+- backend: single-file FastAPI app ([main.py](file:///home/rajdeep/skill+api/main.py)), ~280 lines, monolithic.
+- frontend: single-file HTML/CSS/JS dashboard ([index.html](file:///home/rajdeep/skill+api/index.html)), ~728 lines, hardcoded to `localhost:8000`.
+- AI pipeline: Groq (`llama-3.3-70b-versatile`) for generation, Gemini (`gemini-2.5-flash`) for Google-grounded search.
+- session state: in-memory Python dict (`sessions`), capped at 10 messages, lost on restart.
+- guardrails: soft, only what SKILL.md tells the model. No hardcoded enforcement.
+- security: none. CORS is `*`. No auth, no rate limits, no input validation, no output sanitization.
 
-### What Was Broken or Dangerous Before Phase 1A
+### What was broken or dangerous before Phase 1A
 
 | Issue | Severity | Details |
 |---|---|---|
-| **CORS `*`** | 🔴 Critical | Any origin can hit your API. A random website can scrape your keys' quota. |
-| **No auth** | 🔴 Critical | Anyone who finds the endpoint can burn through your Groq/Gemini quota. |
-| **No rate limiting** | 🔴 Critical | A single curl loop exhausts your 1,000 RPD Groq limit in minutes. |
-| **SSRF via scraper** | 🔴 Critical | `scrape_website()` takes arbitrary URLs. Attacker passes `http://169.254.169.254/latest/meta-data/` and reads your cloud metadata. |
-| **Injection via user_prompt** | 🟠 High | No sanitization. User can inject system prompt overrides ("Ignore all previous instructions…"). |
-| **No input length limits** | 🟠 High | 100KB prompt = blown token budget in one request. |
-| **Error leaks** | 🟠 High | `str(e)` in HTTP 500 responses exposes internal stack traces, file paths, API key fragments. |
-| **In-memory sessions** | 🟡 Medium | Server restart = all context lost. No persistence. |
-| **Re-reading SKILL.md every cold start** | 🟡 Low | Minor, but should be cached and versioned. |
+| CORS `*` | Critical | Any origin can hit your API. A random website can scrape your keys' quota. |
+| No auth | Critical | Anyone who finds the endpoint can burn through your Groq/Gemini quota. |
+| No rate limiting | Critical | A single curl loop exhausts your 1,000 RPD Groq limit in minutes. |
+| SSRF via scraper | Critical | `scrape_website()` takes arbitrary URLs. Attacker passes `http://169.254.169.254/latest/meta-data/` and reads your cloud metadata. |
+| Injection via user_prompt | High | No sanitization. User can inject system prompt overrides ("Ignore all previous instructions…"). |
+| No input length limits | High | 100KB prompt = blown token budget in one request. |
+| Error leaks | High | `str(e)` in HTTP 500 responses exposes internal stack traces, file paths, API key fragments. |
+| In-memory sessions | Medium | Server restart = all context lost. No persistence. |
+| Re-reading SKILL.md every cold start | Low | Minor, but should be cached and versioned. |
 
 ---
 
-## API Rate Limit Reality Check
+## API rate limits
 
 These are the hard ceilings you're working against. Every design decision below respects these numbers.
 
-### Groq Free Tier — `llama-3.3-70b-versatile`
+### Groq free tier: `llama-3.3-70b-versatile`
 | Metric | Limit |
 |---|---|
 | Requests/min | 30 |
@@ -217,7 +216,7 @@ These are the hard ceilings you're working against. Every design decision below 
 | Requests/day | 1,000 |
 | Tokens/day | 100,000 |
 
-### Gemini Free Tier — `gemini-2.5-flash`
+### Gemini free tier: `gemini-2.5-flash`
 | Metric | Limit |
 |---|---|
 | Requests/day | ~1,500 |
@@ -225,11 +224,11 @@ These are the hard ceilings you're working against. Every design decision below 
 | TPM | Variable |
 
 > [!CAUTION]
-> At 6,000 TPM on Groq, a single research + prompt + article generation pipeline consumes ~7,000–10,000 tokens. That means **at most ~10 full pipeline runs per day** on the free tier. The rate limiter must enforce this aggressively.
+> At 6,000 TPM on Groq, a single research + prompt + article generation pipeline consumes ~7,000 to 10,000 tokens. That means at most ~10 full pipeline runs per day on the free tier. The rate limiter must enforce this aggressively.
 
 ---
 
-## Architecture Target
+## Target architecture
 
 ```
 skill+api/
@@ -298,11 +297,11 @@ skill+api/
 
 ---
 
-## Phase 1: Chatbot + MCP Tools + Document Ingestion
+## Phase 1: chatbot, MCP tools, document ingestion
 
-### 1A — Restructure into Proper Python Package
+### 1A. Restructure into a Python package
 
-**Why**: You cannot scale a 280-line monolith. Every future phase depends on this.
+Why: a 280-line monolith does not scale. Every later phase depends on this.
 
 #### Files to Create/Modify
 
@@ -329,10 +328,10 @@ class Settings(BaseSettings):
         env_file = ".env"
 ```
 
-No more hardcoded API keys. No more `os.environ.get()` inline. One source of truth.
+Settings now load from one place: no hardcoded API keys, no inline `os.environ.get()` calls.
 
 ##### [NEW] `app/main.py`
-FastAPI app factory pattern. Registers routers, middleware, startup/shutdown hooks. The current monolithic `main.py` gets decomposed — nothing is deleted, everything is relocated.
+FastAPI app factory pattern. Registers routers, middleware, startup/shutdown hooks. The current monolithic `main.py` gets split up. Nothing is deleted, everything is relocated.
 
 ##### [MODIFY] `main.py` → becomes `run.py`
 Reduced to:
@@ -344,13 +343,13 @@ if __name__ == "__main__":
 
 ---
 
-### 1B — Chatbot Implementation
+### 1B. Chatbot
 
-A general-purpose chat endpoint that uses the SKILL.md persona but allows freeform conversation, not just the rigid 3-tab pipeline.
+A general-purpose chat endpoint that uses the SKILL.md persona for freeform conversation beyond the rigid 3-tab pipeline.
 
 ##### [NEW] `app/routers/chat.py`
 
-**Endpoint**: `POST /api/chat`
+Endpoint: `POST /api/chat`
 
 ```
 Request:
@@ -381,7 +380,7 @@ Orchestration layer:
 
 ---
 
-### 1C — MCP Tool System
+### 1C. MCP tool system
 
 MCP (Model Context Protocol) style tool calling. The model gets a tool manifest and can request tool executions mid-generation.
 
@@ -425,11 +424,11 @@ Each tool is a standalone module extracted from the current monolith:
 The tool manifest is injected into the system prompt so the model knows what tools it can call. When the model outputs a tool call (detected via regex pattern or structured output), `chat_service.py` intercepts, executes the tool, and feeds the result back.
 
 > [!IMPORTANT]
-> Since Groq's `llama-3.3-70b-versatile` does NOT natively support function calling in the same way as OpenAI, tool calls must be implemented via **prompt engineering** — the system prompt instructs the model to output tool calls in a specific JSON format (e.g., `{"tool": "web_search", "args": {"query": "..."}}`), and `chat_service.py` parses and dispatches them. This is a well-established pattern for open-weight models.
+> Groq's `llama-3.3-70b-versatile` does not natively support function calling the way OpenAI does, so tool calls use prompt engineering: the system prompt instructs the model to output tool calls in a specific JSON format (e.g., `{"tool": "web_search", "args": {"query": "..."}}`), and `chat_service.py` parses and dispatches them. This is a well-established pattern for open-weight models.
 
 ---
 
-### 1D — Document Ingestion
+### 1D. Document ingestion
 
 Allow users to upload reference documents (PDF, TXT, MD) that get chunked and included as context.
 
@@ -443,26 +442,26 @@ Allow users to upload reference documents (PDF, TXT, MD) that get chunked and in
 
 ##### [NEW] `app/services/document_service.py`
 
-1. **Accept**: `.txt`, `.md`, `.pdf` only. Max 500KB per file. Max 10 files total.
-2. **Parse**: Extract raw text. For PDF, use `pymupdf` (no heavy deps).
-3. **Chunk**: Split into ~500-token chunks with 50-token overlap (sliding window).
-4. **Store**: Save chunks in SQLite alongside metadata (filename, upload date, chunk index).
-5. **Retrieve**: When a chat references document IDs, pull relevant chunks and prepend to context.
+1. Accept: `.txt`, `.md`, `.pdf` only. Max 500KB per file. Max 10 files total.
+2. Parse: extract raw text. For PDF, use `pymupdf` (no heavy deps).
+3. Chunk: split into ~500-token chunks with 50-token overlap (sliding window).
+4. Store: save chunks in SQLite alongside metadata (filename, upload date, chunk index).
+5. Retrieve: when a chat references document IDs, pull relevant chunks and prepend to context.
 
 > [!NOTE]
 > We are NOT building a vector database or RAG pipeline here. At this scale (10 docs, 500KB each), brute-force chunk retrieval by document ID is sufficient and keeps dependencies minimal. A vector store is premature optimization that burns tokens on embedding calls you can't afford on the free tier.
 
 ---
 
-## Phase 2: Hardcoded System Guardrails
+## Phase 2: hardcoded system guardrails
 
-The SKILL.md guardrails are **suggestions to the model**. The model can ignore them. Hardcoded guardrails are **code that runs before and after LLM calls** and cannot be bypassed.
+SKILL.md guardrails are suggestions to the model, and the model can ignore them. Hardcoded guardrails run as code before and after LLM calls, so they cannot be bypassed.
 
-### 2A — Input Guardrails
+### 2A. Input guardrails
 
 ##### [NEW] `app/guardrails/input_validator.py`
 
-Every user input passes through this **before** reaching the LLM:
+This check runs on every user input before it reaches the LLM:
 
 ```python
 class InputValidationResult:
@@ -471,36 +470,36 @@ class InputValidationResult:
     sanitized_input: str
 ```
 
-**Rules (hardcoded, non-negotiable):**
+Rules, hardcoded:
 
 | Rule | Implementation | Rationale |
 |---|---|---|
-| **Max length** | Reject if `len(input) > 4000 chars` | Prevents token bomb. 4000 chars ≈ 1000 tokens. |
-| **Prompt injection detection** | Regex + keyword blocklist for phrases like `ignore previous`, `system prompt`, `you are now`, `forget your instructions`, `act as`, `reveal your`, `print your system` | Prevents jailbreak attempts. |
-| **URL validation** | Parse with `urllib.parse`, reject private IPs (127.x, 10.x, 172.16-31.x, 192.168.x, 169.254.x), reject non-HTTP(S) schemes, reject localhost | SSRF prevention for the scraper. |
-| **Content blocklist** | Reject inputs containing explicitly harmful request patterns (SQL injection strings, shell metacharacters like `; rm -rf`, `$(...)`, backticks) | Defense in depth — even though you're not executing user input as code *today*, this prevents it if someone adds that feature later. |
-| **Encoding normalization** | Strip null bytes, normalize Unicode (NFC), reject control characters except `\n` and `\t` | Prevents encoding-based bypasses. |
-| **Empty input** | Reject empty or whitespace-only inputs | Wastes API calls. |
+| Max length | Reject if `len(input) > 4000 chars` | Prevents token bomb. 4000 chars ≈ 1000 tokens. |
+| Prompt injection detection | Regex + keyword blocklist for phrases like `ignore previous`, `system prompt`, `you are now`, `forget your instructions`, `act as`, `reveal your`, `print your system` | Prevents jailbreak attempts. |
+| URL validation | Parse with `urllib.parse`, reject private IPs (127.x, 10.x, 172.16-31.x, 192.168.x, 169.254.x), reject non-HTTP(S) schemes, reject localhost | SSRF prevention for the scraper. |
+| Content blocklist | Reject inputs containing explicitly harmful request patterns (SQL injection strings, shell metacharacters like `; rm -rf`, `$(...)`, backticks) | Defense in depth: even though user input is not executed as code today, this prevents it if someone adds that feature later. |
+| Encoding normalization | Strip null bytes, normalize Unicode (NFC), reject control characters except `\n` and `\t` | Prevents encoding-based bypasses. |
+| Empty input | Reject empty or whitespace-only inputs | Wastes API calls. |
 
-### 2B — Output Guardrails
+### 2B. Output guardrails
 
 ##### [NEW] `app/guardrails/output_validator.py`
 
-Every LLM response passes through this **before** reaching the user:
+This check runs on every LLM response before it reaches the user:
 
 | Rule | Implementation | Rationale |
 |---|---|---|
-| **PII detection** | Regex for email addresses, phone numbers, SSNs, credit card patterns → redact with `[REDACTED]` | The model might regurgitate PII from training data or scraped content. |
-| **Fabrication flag** | If the model outputs specific revenue numbers, funding amounts, or direct quotes NOT present in the grounding context, append a disclaimer: `⚠️ Some data points could not be verified against real-time sources.` | Directly from SKILL.md guardrails: "Fabrication of metrics, funding data, search volume tracking, or direct executive quotes is strictly prohibited." |
-| **Format enforcement** | For `seo_generation` stage: verify output starts with `OUTPUT:` token. If missing, prepend it. | SKILL.md mandates this prefix. |
-| **Max output length** | Truncate at 8000 tokens if somehow exceeded (shouldn't happen with `max_tokens=3000` but defense in depth) | Budget protection. |
-| **System prompt leak detection** | If the output contains significant portions of the system prompt text (fuzzy match), strip it | Prevents the model from echoing back your instructions to the user. |
+| PII detection | Regex for email addresses, phone numbers, SSNs, credit card patterns → redact with `[REDACTED]` | The model might regurgitate PII from training data or scraped content. |
+| Fabrication flag | If the model outputs specific revenue numbers, funding amounts, or direct quotes NOT present in the grounding context, append a disclaimer: `Some data points could not be verified against real-time sources.` | Directly from SKILL.md guardrails: "Fabrication of metrics, funding data, search volume tracking, or direct executive quotes is strictly prohibited." |
+| Format enforcement | For `seo_generation` stage: verify output starts with `OUTPUT:` token. If missing, prepend it. | SKILL.md mandates this prefix. |
+| Max output length | Truncate at 8000 tokens if somehow exceeded (shouldn't happen with `max_tokens=3000` but defense in depth) | Budget protection. |
+| System prompt leak detection | If the output contains significant portions of the system prompt text (fuzzy match), strip it | Prevents the model from echoing back your instructions to the user. |
 
-### 2C — Guardrail Rule Definitions
+### 2C. Guardrail rule definitions
 
 ##### [NEW] `app/guardrails/rules.py`
 
-Centralized rule definitions — blocklists, regex patterns, thresholds — so they're easy to audit and update without touching validation logic.
+Centralized rule definitions: blocklists, regex patterns, thresholds. They stay easy to audit and update without touching validation logic.
 
 ```python
 # Prompt injection patterns
@@ -537,15 +536,15 @@ PII_PATTERNS = {
 
 ---
 
-## Phase 3: Persistent Memory
+## Phase 3: persistent memory
 
-### 3A — SQLite Session Store
+### 3A. SQLite session store
 
 ##### [NEW] `app/memory/store.py`
 
 Replace the in-memory `sessions: Dict[str, List[dict]]` with SQLite.
 
-**Schema:**
+Schema:
 
 ```sql
 CREATE TABLE sessions (
@@ -604,9 +603,9 @@ CREATE INDEX idx_usage_timestamp ON usage_log(timestamp);
 CREATE INDEX idx_usage_ip ON usage_log(ip_address);
 ```
 
-**Why SQLite and not Postgres/Redis**: You're a single-instance app on free-tier APIs that can handle ~10 pipeline runs per day. SQLite handles this with zero ops burden. When you need multi-instance, swap the store implementation — the interface stays the same.
+Why SQLite and not Postgres or Redis: this is a single-instance app on free-tier APIs that can handle ~10 pipeline runs per day. SQLite handles that with no ops burden. When you need multiple instances, swap the store implementation; the interface stays the same.
 
-### 3B — Session API
+### 3B. Session API
 
 ##### [NEW] `app/routers/sessions.py`
 
@@ -615,9 +614,9 @@ CREATE INDEX idx_usage_ip ON usage_log(ip_address);
 | `/api/sessions` | GET | List all sessions (paginated, newest first) |
 | `/api/sessions/{id}` | GET | Get session details + message history |
 | `/api/sessions/{id}` | DELETE | Delete a session and its messages |
-| `/api/sessions/{id}/resume` | POST | Resume a session — loads history into context |
+| `/api/sessions/{id}/resume` | POST | Resume a session and load history into context |
 
-### 3C — Frontend Session Support
+### 3C. Frontend session support
 
 ##### [MODIFY] `index.html`
 
@@ -629,23 +628,23 @@ CREATE INDEX idx_usage_ip ON usage_log(ip_address);
 
 ---
 
-## Phase 4: Token Optimization
+## Phase 4: token optimization
 
-With 6,000 TPM and 100,000 TPD on Groq, every token is currency. This phase is about spending less of it.
+Groq allows 6,000 TPM and 100,000 TPD, so this phase focuses on spending fewer tokens.
 
-### 4A — History Compression
+### 4A. History compression
 
 ##### [NEW] `app/memory/compressor.py`
 
 When session history exceeds a threshold, compress older messages into a summary.
 
-**Algorithm:**
+Algorithm:
 1. Keep the most recent 4 messages verbatim (2 user + 2 assistant).
 2. For older messages, batch them (up to 6 at a time) and send to Groq with a summarization prompt: *"Summarize this conversation history in under 200 tokens, preserving key decisions, facts, and context."*
 3. Replace the batch with a single `{"role": "system", "content": "[CONVERSATION SUMMARY]: ..."}` message.
 4. Store the original messages in the DB (never lose data), but only send the compressed version to the LLM.
 
-**Token budget per request:**
+Token budget per request:
 | Component | Target Tokens | Notes |
 |---|---|---|
 | System prompt (SKILL.md) | ~800 | Current SKILL.md is ~1500 tokens. See 4B. |
@@ -654,42 +653,42 @@ When session history exceeds a threshold, compress older messages into a summary
 | Document context | ~500 | Relevant chunks only |
 | Grounding context | ~300 | Trimmed Google search results |
 | User input | ~300 | Enforced by input validator |
-| **Total input** | **~2,700** | Leaves room for 3,000 output tokens |
-| **Grand total** | **~5,700** | Under the 6,000 TPM limit |
+| Total input | ~2,700 | Leaves room for 3,000 output tokens |
+| Grand total | ~5,700 | Under the 6,000 TPM limit |
 
-### 4B — System Prompt Optimization
+### 4B. System prompt optimization
 
 The current SKILL.md is verbose. Create a tokenizer utility that measures prompt token count and a compressed version of the system prompt for non-generation stages.
 
 ##### [NEW] `app/services/prompt_optimizer.py`
 
-- **Full prompt**: Used for `seo_generation` stage (needs all editorial constraints).
-- **Compressed prompt**: Used for `chat` and `ideation` stages (core identity + output format rules only, ~400 tokens).
-- **Minimal prompt**: Used for tool-only calls (style analysis, etc.) (~100 tokens).
+- full prompt: used for `seo_generation` stage (needs all editorial constraints).
+- compressed prompt: used for `chat` and `ideation` stages (core identity + output format rules only, ~400 tokens).
+- minimal prompt: used for tool-only calls (style analysis, etc.) (~100 tokens).
 
-### 4C — Grounding Context Trimming
+### 4C. Grounding context trimming
 
 ##### [MODIFY] `app/services/gemini_service.py`
 
 Current `fetch_live_google_grounding()` asks Gemini to extract facts with `max_output_tokens=1000`. That's 1000 tokens of context injected into every Groq call.
 
-**Fix:**
+Fix:
 - Reduce `max_output_tokens` to `500`.
 - Post-process the response: strip boilerplate, deduplicate, keep only structured facts.
 - Cache grounding results by query (SHA-256 hash) for 1 hour. If same company is researched twice, reuse cached grounding.
 
-### 4D — Scraper Output Trimming
+### 4D. Scraper output trimming
 
 ##### [MODIFY] `app/tools/scrape_url.py`
 
 Current scraper returns 2000 chars of raw page text. Most of it is noise.
 
-**Fix:**
+Fix:
 - Extract only: title, meta description, H1-H3 headings, and first 500 chars of body text.
 - Cap total output at 800 chars.
 - Strip all HTML entities, excessive whitespace, nav/footer content (already partially done, but enforce more aggressively).
 
-### 4E — Token Counting & Usage Dashboard
+### 4E. Token counting and usage dashboard
 
 ##### [MODIFY] `app/main.py`
 
@@ -720,29 +719,29 @@ Returns:
 
 ---
 
-## Phase 5: Security Hardening & Rate Limiting
+## Phase 5: security hardening and rate limiting
 
-### 5A — Rate Limiter
+### 5A. Rate limiter
 
 ##### [NEW] `app/security/rate_limiter.py`
 
-**Dual-layer rate limiting** — respects both per-minute and per-day API ceilings with safety margin.
+Dual-layer rate limiting: respects both per-minute and per-day API ceilings with a safety margin.
 
 | Layer | Window | Limit | Headroom | Effective Limit |
 |---|---|---|---|---|
-| Groq RPM | 1 minute | 30 | 33% | **20 req/min** |
-| Groq RPD | 1 day | 1,000 | 20% | **800 req/day** |
-| Groq TPM | 1 minute | 6,000 | 15% | **5,100 tokens/min** |
-| Groq TPD | 1 day | 100,000 | 15% | **85,000 tokens/day** |
-| Gemini RPD | 1 day | 1,500 | 20% | **1,200 req/day** |
-| Per-IP requests | 1 minute | — | — | **5 req/min** |
-| Per-IP requests | 1 day | — | — | **50 req/day** |
-| Per-session messages | lifetime | — | — | **100 messages** |
+| Groq RPM | 1 minute | 30 | 33% | 20 req/min |
+| Groq RPD | 1 day | 1,000 | 20% | 800 req/day |
+| Groq TPM | 1 minute | 6,000 | 15% | 5,100 tokens/min |
+| Groq TPD | 1 day | 100,000 | 15% | 85,000 tokens/day |
+| Gemini RPD | 1 day | 1,500 | 20% | 1,200 req/day |
+| Per-IP requests | 1 minute | n/a | n/a | 5 req/min |
+| Per-IP requests | 1 day | n/a | n/a | 50 req/day |
+| Per-session messages | lifetime | n/a | n/a | 100 messages |
 
 > [!WARNING]
 > The headroom percentages exist because if you hit the actual API rate limit, the provider returns 429 and your user sees an error. Better to reject gracefully on your end with a clear message ("Rate limit reached, try again in X seconds") than to eat a provider 429.
 
-**Implementation**: Sliding window counter stored in SQLite (not Redis — see Phase 3 rationale). On each request:
+Implementation: the limiter keeps a sliding window counter in SQLite, not Redis (see Phase 3). On each request:
 1. Check per-IP limits → reject with 429 if exceeded.
 2. Estimate token cost of this request.
 3. Check aggregate Groq TPM/TPD/RPM/RPD → reject with 429 + `Retry-After` header if exceeded.
@@ -750,7 +749,7 @@ Returns:
 5. Proceed if all checks pass.
 6. After response, log actual usage.
 
-**Response on rate limit:**
+Response on rate limit:
 ```json
 {
     "error": "rate_limit_exceeded",
@@ -759,13 +758,13 @@ Returns:
 }
 ```
 
-### 5B — API Key Authentication
+### 5B. API key authentication
 
 ##### [NEW] `app/security/auth.py`
 
 Generate API keys for users. Simple, no OAuth complexity needed at this scale.
 
-**Scheme:**
+Scheme:
 1. API keys are SHA-256 hashes stored in SQLite. Raw key shown once at creation.
 2. Clients pass `Authorization: Bearer sk-...` header.
 3. FastAPI dependency validates the key, looks up the associated user/IP.
@@ -789,7 +788,7 @@ CREATE TABLE api_keys (
 - Creates a new API key, returns the raw key.
 - Also: `GET /api/admin/keys` (list), `DELETE /api/admin/keys/{hash}` (revoke).
 
-### 5C — CORS Lockdown
+### 5C. CORS lockdown
 
 ##### [NEW] `app/security/cors.py`
 
@@ -800,7 +799,7 @@ ALLOWED_ORIGINS = settings.allowed_origins  # e.g., ["http://localhost:8000", "h
 
 Configured via `.env` file. No wildcards in production.
 
-### 5D — SSRF Prevention (Scraper Hardening)
+### 5D. SSRF prevention (scraper hardening)
 
 ##### [MODIFY] `app/tools/scrape_url.py`
 
@@ -815,7 +814,7 @@ Before making any HTTP request to a user-supplied URL:
 7. Follow max 3 redirects, re-validate each redirect URL against the same rules.
 8. Reject responses larger than 1MB.
 
-### 5E — Error Sanitization
+### 5E. Error sanitization
 
 ##### [MODIFY] All routers
 
@@ -835,7 +834,7 @@ except Exception as e:
 
 Never expose `str(e)` to the client. Log it server-side.
 
-### 5F — Request Validation & Size Limits
+### 5F. Request validation and size limits
 
 ##### [MODIFY] `app/models.py`
 
@@ -861,9 +860,9 @@ Also add FastAPI request body size limit via middleware: reject any request body
 
 ---
 
-## Phase 6: Frontend Updates
+## Phase 6: frontend updates
 
-### 6A — Chat Interface
+### 6A. Chat interface
 
 Add a persistent chat panel (drawer or sidebar) to `index.html`:
 - Text input + send button at the bottom.
@@ -872,7 +871,7 @@ Add a persistent chat panel (drawer or sidebar) to `index.html`:
 - Tool calls shown as collapsible cards within the chat flow.
 - Chat is available from any tab.
 
-### 6B — Document Upload UI
+### 6B. Document upload UI
 
 Add a document upload section to the Links tab:
 - Drag-and-drop zone or file picker.
@@ -880,7 +879,7 @@ Add a document upload section to the Links tab:
 - File type validation client-side (`.txt`, `.md`, `.pdf`).
 - Size validation client-side (500KB).
 
-### 6C — Session History UI
+### 6C. Session history UI
 
 Add a session list to the header or sidebar:
 - Shows session titles + timestamps.
@@ -888,7 +887,7 @@ Add a session list to the header or sidebar:
 - Delete button per session.
 - "New Session" button.
 
-### 6D — Usage Indicator
+### 6D. Usage indicator
 
 Add a subtle usage indicator in the header status bar:
 - Shows requests remaining today.
@@ -897,7 +896,7 @@ Add a subtle usage indicator in the header status bar:
 
 ---
 
-## Execution Order & Dependencies
+## Execution order and dependencies
 
 ```mermaid
 graph TD
@@ -917,15 +916,15 @@ graph TD
 ```
 
 > [!IMPORTANT]
-> **Phase 5 (Security) is shown late in the dependency chain because it wraps around everything else, but its individual components should be implemented incrementally:**
-> - **5C (CORS)** and **5E (Error sanitization)**: Do these in Phase 1A. They're 5-minute fixes.
-> - **5D (SSRF prevention)**: Do this when extracting the scraper in Phase 1C.
-> - **5F (Request validation)**: Do this when creating Pydantic models in Phase 1A.
-> - **5A (Rate limiter)** and **5B (Auth)**: These depend on the SQLite store from Phase 3.
+> Phase 5 (security) sits late in the dependency chain because it wraps around everything else, but implement its parts incrementally:
+> - 5C (CORS) and 5E (error sanitization): do these in Phase 1A. Both take about five minutes.
+> - 5D (SSRF prevention): do this when extracting the scraper in Phase 1C.
+> - 5F (request validation): do this when creating Pydantic models in Phase 1A.
+> - 5A (rate limiter) and 5B (auth): these depend on the SQLite store from Phase 3.
 
 ---
 
-## New Dependencies
+## New dependencies
 
 ```
 # requirements.txt
@@ -946,20 +945,20 @@ No new heavy infrastructure. No Redis, no Postgres, no vector DB, no Celery. All
 
 ---
 
-## What This Plan Does NOT Include (And Why)
+## What this plan does not include, and why
 
 | Omitted Feature | Reason |
 |---|---|
-| **Vector DB / Embeddings RAG** | At 10 documents and 100K TPD, brute-force chunk retrieval is fine. Embedding calls would eat your Gemini quota. Revisit when you have >100 documents. |
-| **User accounts / OAuth** | Overkill for your scale. API keys are sufficient. Add OAuth when you have a multi-tenant SaaS. |
-| **Kubernetes / Docker** | You're running `uvicorn main:app --reload` locally. Containerize when you deploy to a server. |
-| **WebSocket chat** | SSE (already implemented) is sufficient for streaming. WebSockets add complexity for no gain at single-user scale. |
-| **Async Groq client** | Groq's Python SDK is synchronous. Wrapping in `asyncio.to_thread()` is the right move (already implicit in FastAPI's thread pool). Not worth a custom async implementation. |
-| **Multi-model routing** | Stick with one Groq model and one Gemini model until you have a reason to switch mid-pipeline. |
+| Vector DB / Embeddings RAG | At 10 documents and 100K TPD, brute-force chunk retrieval is fine. Embedding calls would eat your Gemini quota. Revisit when you have >100 documents. |
+| User accounts / OAuth | Overkill for your scale. API keys are sufficient. Add OAuth when you have a multi-tenant SaaS. |
+| Kubernetes / Docker | You're running `uvicorn main:app --reload` locally. Containerize when you deploy to a server. |
+| WebSocket chat | SSE (already implemented) is sufficient for streaming. WebSockets add complexity for no gain at single-user scale. |
+| Async Groq client | Groq's Python SDK is synchronous. Wrapping in `asyncio.to_thread()` is the right move (already implicit in FastAPI's thread pool). Not worth a custom async implementation. |
+| Multi-model routing | Stick with one Groq model and one Gemini model until you have a reason to switch mid-pipeline. |
 
 ---
 
-## Risk Register
+## Risk register
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
