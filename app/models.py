@@ -60,7 +60,32 @@ class ScoreRequest(BaseModel):
     @field_validator("target_keyword")
     @classmethod
     def validate_target_keyword(cls, value: str) -> str:
-        return value.replace("\x00", "").strip()
+        cleaned = value.replace("\x00", "").strip()
+        if len(cleaned) > 200:
+            raise ValueError("target_keyword must be 200 characters or fewer.")
+        return cleaned
+
+
+class ExportRequest(BaseModel):
+    title: str = Field(default="article", min_length=1, max_length=120)
+    article_text: str = Field(..., min_length=1, max_length=200000)
+    format: Literal["md", "txt"] = "md"
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str) -> str:
+        cleaned = value.replace("\x00", "").strip()
+        if not cleaned:
+            raise ValueError("title cannot be empty.")
+        return cleaned
+
+    @field_validator("article_text")
+    @classmethod
+    def validate_article_text(cls, value: str) -> str:
+        cleaned = value.replace("\x00", "").strip()
+        if not cleaned:
+            raise ValueError("article_text cannot be empty.")
+        return cleaned
 
 
 class ChatRequest(BaseModel):

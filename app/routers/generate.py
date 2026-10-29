@@ -3,11 +3,11 @@ import logging
 import re
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 
 from app.guardrails.input_validator import sanitize_external_context, sanitize_trusted_llm_input
 from app.guardrails.output_validator import sanitize_llm_output
-from app.models import ContentRequest
+from app.models import ContentRequest, ExportRequest
 from app.services.document_service import get_document_text
 from app.services.gemini_service import fetch_live_google_grounding
 from app.services.groq_service import analyze_writing_style, create_completion, create_completion_stream
@@ -138,3 +138,16 @@ async def build_runtime_instruction(request: ContentRequest) -> tuple[str, str]:
         instruction += "\n- UPLOADED DOCUMENTS:\n" + "\n\n".join(document_texts)
 
     return sanitize_trusted_llm_input(instruction, max_length=9000), grounding_context
+
+
+@router.post("/export-article")
+async def export_article(request: ExportRequest):
+    """Download an article as a file so a draft never has to leave the app by copy-paste."""
+    slug = re.sub(r"[^a-z0-9]+", "-", request.title.lower()).strip("-") or "article"
+    filename = f"{slug}.{request.format}"
+    media_type = "text/markdown; charset=utf-8" if request.format == "md" else "text/plain; charset=utf-8"
+    return PlainTextResponse(
+        request.article_text,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

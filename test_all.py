@@ -100,6 +100,7 @@ def _():
         "/api/documents/{document_id}/content",
         "/api/generate-content",
         "/api/generate-content-stream",
+        "/api/export-article",
         "/api/score-article",
         "/api/sessions",
         "/api/sessions/{session_id}",

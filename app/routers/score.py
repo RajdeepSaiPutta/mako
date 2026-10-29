@@ -26,7 +26,6 @@ def calculate_article_score(text: str, target_keyword: str = "") -> dict[str, in
     word_count = len(words)
     reading_time = max(1, word_count // 200)
     headings = len(re.findall(r"^#{2,3}\s+", text, re.MULTILINE))
-
     kw_density = 0.0
     if target_keyword and word_count > 0:
         kw_count = len(re.findall(r"\b" + re.escape(target_keyword.lower()) + r"\b", text.lower()))
@@ -51,6 +50,8 @@ def calculate_article_score(text: str, target_keyword: str = "") -> dict[str, in
     if fk_score > 40:
         score += 10
 
+    suggestions = build_suggestions(text, word_count, headings, kw_density, fk_score, target_keyword)
+
     return {
         "word_count": word_count,
         "reading_time": reading_time,
@@ -58,7 +59,43 @@ def calculate_article_score(text: str, target_keyword: str = "") -> dict[str, in
         "keyword_density": round(kw_density, 2),
         "readability_score": round(fk_score, 1),
         "overall_score": min(100, max(0, score)),
+        "suggestions": suggestions,
     }
+
+
+def build_suggestions(
+    text: str,
+    word_count: int,
+    headings: int,
+    kw_density: float,
+    fk_score: float,
+    target_keyword: str,
+) -> list[str]:
+    """Actionable, machine-checked tips tied to the actual metrics."""
+    tips: list[str] = []
+
+    if word_count < 500:
+        tips.append(f"the article is short ({word_count} words). aim for 800 to 1200 for a full treatment.")
+    if headings <= 3:
+        tips.append(f"only {headings} headings found. subheadings help scanning, add a few more.")
+    if paragraphs := [p for p in (s.strip() for s in text.split("\n\n")) if p]:
+        long_paras = sum(1 for p in paragraphs if len(re.findall(r"\b\w+\b", p)) > 90)
+        if long_paras:
+            tips.append(f"{long_paras} paragraph(s) run past 90 words. split the heavy ones.")
+    if fk_score and fk_score < 40:
+        tips.append("sentences skew long or dense for general readers. break up the worst offenders.")
+    if not re.search(r"^#\s+", text, re.MULTILINE):
+        tips.append("no H1 heading. give the article one clear top heading.")
+    if target_keyword:
+        if kw_density < 0.5:
+            tips.append(f"'{target_keyword}' barely appears. work it into two or three natural spots.")
+        elif kw_density > 2.5:
+            tips.append(f"'{target_keyword}' density is {kw_density:.1f}%, too high. swap some mentions for synonyms.")
+    if not re.search(r"[?!.]\s*$", text.rstrip(), re.MULTILINE):
+        pass  # trailing text without punctuation is rare; skip nitpicks
+    if len(tips) == 0:
+        tips.append("looks solid. nothing mechanical to fix.")
+    return tips
 
 
 def count_syllables(word: str) -> int:
